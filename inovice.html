@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>계산서 관리</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#13141a;--s1:#1a1c24;--s2:#20222c;--s3:#262933;--border:#2a2d3a;--t1:#d0d4e2;--t2:#8890a8;--t3:#50566a;--accent:#4a7cc7;--green:#3d8f5f;--red:#b03a3a;--amber:#b07a18;--purple:#6a4aa8}
+body{background:var(--bg);color:var(--t1);font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;min-height:100vh}
+.sc{max-width:1100px;margin:0 auto;padding:0 24px 60px}
+.sc.h{display:none}
+
+/* PAGE HEADER */
+.pg-hdr{padding:20px 0 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap}
+.pg-hdr h1{font-size:18px;font-weight:700;color:var(--t1)}
+.pg-hdr h2{font-size:16px;font-weight:700;color:var(--t1)}
+.pg-back{background:none;border:none;color:var(--t2);font-size:13px;cursor:pointer;padding:6px 12px 6px 0;display:flex;align-items:center;gap:6px;transition:color .15s;white-space:nowrap}
+.pg-back:hover{color:var(--t1)}
+.pg-spacer{flex:1}
+.hdr-btn{background:var(--s1);border:1px solid var(--border);border-radius:6px;color:var(--t2);font-size:12px;padding:7px 14px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.hdr-btn:hover{border-color:var(--accent);color:var(--t1)}
+.hdr-btn.pri{background:#1a2f52;border-color:#2e4f82;color:#90b4e8}
+.hdr-btn.pri:hover{background:#1e3a64}
+
+/* ── HOME SCREEN ── */
+.home-top{display:flex;align-items:center;gap:16px;padding:28px 0 20px;flex-wrap:wrap}
+.home-top h1{font-size:22px;font-weight:700;color:var(--t1)}
+.home-top .sub{font-size:13px;color:var(--t3);margin-top:3px}
+.home-actions{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+
+.section-label{font-size:11px;color:var(--t3);font-weight:600;letter-spacing:.6px;text-transform:uppercase;padding:4px 0 10px;border-bottom:1px solid var(--s2);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+
+/* MONTH CARDS */
+.month-list{display:flex;flex-direction:column;gap:8px}
+.mc{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:16px 20px;cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;transition:border-color .15s;position:relative}
+.mc:hover{border-color:#3a4060}
+.mc-month{font-size:18px;font-weight:700;color:var(--t1);display:flex;align-items:center;gap:10px}
+.mc-title{font-size:12px;color:var(--t3);margin-top:3px}
+.mc-stats{display:flex;gap:16px;margin-top:8px;flex-wrap:wrap}
+.mc-stat{font-size:12px;color:var(--t2)}
+.mc-stat .v{font-weight:700;margin-left:3px}
+.mc-stat .v.g{color:#4a9e6b}
+.mc-stat .v.r{color:#c04545}
+.mc-stat .v.a{color:#c99020}
+.mc-memo-preview{font-size:11px;color:var(--amber);margin-top:6px;font-style:italic}
+.mc-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.mc-arrow{font-size:18px;color:var(--t3)}
+.mc-del{position:absolute;top:10px;right:10px;background:none;border:none;color:var(--t3);font-size:12px;cursor:pointer;padding:4px 6px;border-radius:4px;opacity:0;transition:opacity .15s}
+.mc:hover .mc-del{opacity:1}
+.mc-del:hover{background:#2e1a1a;color:#c04040}
+.mc-pending{background:#2a1a08;border:1px solid #4a3010;color:#c99020;border-radius:5px;padding:3px 10px;font-size:11px;font-weight:700}
+.mc-all-done{background:#0e2a1a;border:1px solid #1e4a2a;color:#4a9e6b;border-radius:5px;padding:3px 10px;font-size:11px;font-weight:700}
+.mc-no-data{text-align:center;padding:48px;color:var(--t3)}
+.mc-no-data .ic{font-size:36px;margin-bottom:12px}
+.mc-no-data p{font-size:12px;margin-top:6px}
+
+.drop-hint{border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;color:var(--t3);font-size:12px;margin-top:8px;transition:border-color .2s}
+.drop-hint.drag{border-color:var(--accent);color:var(--t1)}
+
+/* ── DETAIL SCREEN ── */
+.detail-hdr-top{padding:16px 0 0;display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.detail-title-wrap{flex:1;min-width:200px}
+.title-input{background:var(--s1);border:1px solid var(--border);border-radius:6px;color:var(--t1);font-size:14px;font-weight:600;padding:7px 12px;width:100%;transition:border-color .2s}
+.title-input:focus{outline:none;border-color:var(--accent)}
+.month-memo{margin-top:6px;width:100%;background:var(--s1);border:1px solid var(--border);border-radius:5px;color:var(--t2);font-size:11px;padding:5px 10px;resize:none;height:28px;transition:all .2s;line-height:1.5;font-family:inherit}
+.month-memo:focus{outline:none;border-color:var(--accent);height:52px;color:var(--t1)}
+.month-memo::placeholder{color:var(--t3)}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:12px 0}
+.stat{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:11px 14px}
+.stat .sl{font-size:10px;color:var(--t3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px}
+.stat .sv{font-size:16px;font-weight:700}
+.sv.g{color:#4a9e6b}.sv.r{color:#c04545}.sv.b{color:#4a7cc7}.sv.a{color:#c99020}.sv.p{color:#9a7ad8}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border)}
+.tab{padding:10px 18px;background:none;border:none;color:var(--t3);font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap}
+.tab:hover{color:var(--t2)}
+.tab.active{color:var(--t1);border-bottom-color:var(--accent)}
+.tab .n{display:inline-block;background:var(--s2);border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px;color:var(--t3);font-weight:400}
+.tab.active .n{background:#1a2f52;color:#90b4e8}
+
+/* SEC SUMMARY */
+.sec-sum{display:flex;gap:20px;padding:10px 0;font-size:12px;color:var(--t3);flex-wrap:wrap;border-bottom:1px solid var(--s2)}
+.sec-sum strong{color:var(--t1)}
+
+.cash-note{background:#1a1430;border:1px solid #2e2050;border-radius:6px;padding:8px 14px;margin:8px 0;font-size:11px;color:#9a7ad8}
+
+/* GROUP CARD */
+.gc{border:1px solid var(--border);border-radius:8px;margin-bottom:7px;overflow:hidden;transition:border-color .15s}
+.gc:hover{border-color:#383c50}
+.gc.open{border-color:#2e4a7a}
+.gh{padding:11px 16px;display:grid;grid-template-columns:1fr 170px 84px 20px;gap:12px;align-items:center;cursor:pointer;user-select:none}
+.gh:hover{background:var(--s1)}
+.biz{font-size:13px;font-weight:600;color:var(--t1);display:flex;align-items:center;flex-wrap:wrap;row-gap:2px;gap:0}
+.biz.un{color:var(--t3);font-style:italic;font-weight:400}
+.reg-btn{font-size:10px;color:var(--accent);border:1px solid #1e3060;background:none;border-radius:3px;padding:1px 6px;cursor:pointer;margin-left:8px;flex-shrink:0}
+.reg-btn:hover{background:#1a2a50}
+.gsub{font-size:11px;color:var(--t3);margin-top:2px}
+.gcnt{font-size:11px;color:var(--t3);margin-top:1px}
+.gmemo-inline{font-size:11px;color:var(--amber);margin-top:3px;font-style:italic}
+.ga-right{text-align:right}
+.ga-total{font-size:14px;font-weight:700}
+.ga-sub{font-size:10px;color:var(--t3);margin-top:2px}
+.badge{display:inline-block;padding:3px 9px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap}
+.badge.ok{background:#162a1e;color:#4a9e6b;border:1px solid #1e4028}
+.badge.no{background:#2a1414;color:#9a4a4a;border:1px solid #3a2020}
+.badge.rf{background:#2a2010;color:#c09030;border:1px solid #3a3010}
+.badge.ca{background:#1a1430;color:#9a7ad8;border:1px solid #2e2050}
+.chev{color:var(--t3);font-size:11px;transition:transform .2s;text-align:center}
+.gc.open .chev{transform:rotate(180deg)}
+.gb{display:none;border-top:1px solid var(--border)}
+.gc.open .gb{display:block}
+
+/* TX ROW */
+.tx{display:grid;grid-template-columns:100px 1fr 110px 160px;gap:8px;padding:9px 16px;border-bottom:1px solid var(--s2);align-items:start}
+.tx:last-child{border-bottom:none}
+.tx:hover{background:var(--s1)}
+.td{font-size:11px;color:var(--t2);line-height:1.5}
+.tn{font-size:12px;color:var(--t2)}
+.tnote{font-size:11px;color:var(--t3);margin-top:1px}
+.ta{font-size:13px;font-weight:600;text-align:right}
+.ta.in{color:#4a9e6b}.ta.out{color:#c04545}.ta.rf{color:#c09030}.ta.ca{color:#9a7ad8}
+.tvat{font-size:10px;color:var(--t3);text-align:right;margin-top:2px}
+.tx-acts{display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap;align-items:flex-start}
+.ab{padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:none;color:var(--t3);font-size:10px;cursor:pointer;white-space:nowrap;transition:all .15s}
+.ab:hover{border-color:var(--accent);color:var(--t1)}
+.ab.d:hover{border-color:#6a2020;color:#c04040}
+.tx-memo{width:100%;background:transparent;border:none;border-bottom:1px dashed #2e3240;color:var(--t3);font-size:11px;padding:2px 0;resize:none;height:20px;transition:all .2s;font-family:inherit;margin-top:4px;overflow:hidden}
+.tx-memo:focus{outline:none;border-bottom-color:var(--accent);color:var(--t1);height:38px;background:var(--s2);padding:4px 6px;border-radius:3px}
+.tx-memo::placeholder{color:var(--t3)}
+.tx-memo.hm{color:var(--amber);border-bottom-color:#3a3010}
+.gf{background:var(--s1);padding:10px 16px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;border-top:1px solid var(--border)}
+.gfa{display:flex;gap:16px;font-size:12px;flex-wrap:wrap}
+.gfa .i .l{color:var(--t3);font-size:10px;margin-bottom:2px}
+.gfa .i .v{font-weight:700;color:var(--t1)}
+.gfb{display:flex;gap:6px;flex-wrap:wrap;align-self:flex-start}
+.gmemo-wrap{width:100%;margin-top:8px}
+.gmemo-ta{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--t2);font-size:11px;padding:6px 10px;resize:none;height:32px;transition:all .2s;font-family:inherit}
+.gmemo-ta:focus{outline:none;border-color:var(--accent);height:60px;color:var(--t1)}
+.gmemo-ta::placeholder{color:var(--t3)}
+.gmemo-ta.hm{border-color:#3a3010;color:var(--amber)}
+
+/* ── MAPPING SCREEN ── */
+.map-search-row{display:flex;gap:8px;margin-bottom:16px;align-items:center}
+.map-search{flex:1;background:var(--s1);border:1px solid var(--border);border-radius:6px;color:var(--t1);font-size:13px;padding:9px 12px}
+.map-search:focus{outline:none;border-color:var(--accent)}
+.map-list{display:flex;flex-direction:column;gap:6px}
+.map-item{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px}
+.map-item-info{flex:1;min-width:0}
+.map-biz{font-size:14px;font-weight:700;color:var(--t1);margin-bottom:6px}
+.map-aliases{display:flex;flex-wrap:wrap;gap:5px}
+.alias-chip{background:var(--s2);border:1px solid var(--border);color:var(--t2);border-radius:4px;padding:2px 8px;font-size:11px}
+.map-memo{font-size:11px;color:var(--amber);margin-top:6px;font-style:italic}
+.map-item-acts{display:flex;gap:6px;flex-shrink:0}
+.map-empty{text-align:center;padding:40px;color:var(--t3);font-size:12px}
+
+/* BTNS */
+.btn{padding:7px 14px;border-radius:5px;border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;background:none;color:var(--t2)}
+.btn:hover{border-color:var(--accent);color:var(--t1)}
+.btn.pri{background:#1a2f52;border-color:#2e4f82;color:#90b4e8}
+.btn.pri:hover{background:#1e3a64}
+.btn.sm{padding:4px 10px;font-size:11px}
+.btn.danger{border-color:#3a2020;color:#9a4a4a}
+.btn.danger:hover{background:#2a1414}
+
+/* MODALS */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;display:flex;align-items:center;justify-content:center}
+.ov.h{display:none}
+.mdl{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:22px;width:440px;max-width:92vw;max-height:88vh;overflow-y:auto}
+.mdl h3{font-size:14px;font-weight:700;margin-bottom:14px}
+.fl{margin-bottom:12px}
+.fl label{display:block;font-size:11px;color:var(--t3);margin-bottom:4px}
+.fl input,.fl select,.fl textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--t1);font-size:13px;padding:9px 12px;font-family:inherit}
+.fl input:focus,.fl select:focus,.fl textarea:focus{outline:none;border-color:var(--accent)}
+.fl .hint{font-size:10px;color:var(--t3);margin-top:4px}
+.ma{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+.merge-list{max-height:200px;overflow-y:auto;margin-top:6px;border:1px solid var(--border);border-radius:6px}
+.mi{padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--s2);font-size:12px}
+.mi:last-child{border-bottom:none}
+.mi:hover,.mi.sel{background:var(--s2)}
+.mi .mb{font-weight:600;color:var(--t1)}
+.mi .ms{font-size:11px;color:var(--t3);margin-top:2px}
+
+.empty{text-align:center;padding:36px;color:var(--t3);font-size:12px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:9px 16px;font-size:12px;color:var(--t1);z-index:300;opacity:0;transition:opacity .25s;pointer-events:none;max-width:280px}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<input type="file" id="fi" accept=".csv" style="display:none" onchange="onFile(this.files[0])">
+
+<!-- ════════════════════════════════ HOME ════════════════════════════════ -->
+<div id="sc-home" class="sc">
+  <div class="home-top">
+    <div>
+      <h1>📄 계산서 관리</h1>
+      <div class="sub">월별 거래내역 정리 · 계산서 발행 추적</div>
+    </div>
+    <div class="home-actions">
+      <button class="hdr-btn" onclick="showScreen('map')">🏢 거래처 DB</button>
+      <button class="hdr-btn pri" onclick="document.getElementById('fi').click()">📂 CSV 업로드</button>
+    </div>
+  </div>
+
+  <div class="section-label">
+    <span>월별 정리 내역</span>
+    <span id="home-count" style="font-size:11px;color:var(--t3);font-weight:400"></span>
+  </div>
+  <div class="month-list" id="monthList"></div>
+
+  <div class="drop-hint" id="dropHint">
+    CSV 파일을 여기에 드래그 앤 드롭해도 됩니다
+  </div>
+</div>
+
+<!-- ════════════════════════════════ DETAIL ════════════════════════════════ -->
+<div id="sc-detail" class="sc h">
+  <div class="detail-hdr-top">
+    <button class="pg-back" onclick="showScreen('home')">← 목록으로</button>
+    <div class="detail-title-wrap">
+      <input class="title-input" id="titleInp" placeholder="제목 (예: 26년 4월 우리은행 계산서)" oninput="saveTitle()">
+      <textarea class="month-memo" id="monthMemo" placeholder="이번 달 메모 — 특이사항, 이월 건, 확인 필요 항목..." oninput="saveMonthMemo()" rows="1"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;padding-top:6px;flex-shrink:0">
+      <button class="hdr-btn" onclick="document.getElementById('fi').click()">📂 CSV 재업로드</button>
+    </div>
+  </div>
+
+  <div class="stats" id="statsBar"></div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="setTab('sales',this)">매출 <span class="n" id="n-sales">0</span></button>
+    <button class="tab" onclick="setTab('purchase',this)">매입 <span class="n" id="n-purchase">0</span></button>
+    <button class="tab" onclick="setTab('zero',this)">영세율 <span class="n" id="n-zero">0</span></button>
+    <button class="tab" onclick="setTab('cash',this)">현금대납 <span class="n" id="n-cash">0</span></button>
+    <button class="tab" onclick="setTab('refund',this)">환불/오류 <span class="n" id="n-refund">0</span></button>
+  </div>
+  <div class="sec-sum" id="secSum"></div>
+  <div id="glist"></div>
+</div>
+
+<!-- ════════════════════════════════ MAPPING ════════════════════════════════ -->
+<div id="sc-map" class="sc h">
+  <div class="pg-hdr">
+    <button class="pg-back" onclick="showScreen('home')">← 목록으로</button>
+    <h2>🏢 거래처 DB</h2>
+    <div class="pg-spacer"></div>
+    <button class="hdr-btn pri" onclick="openMapEdit(-1)">+ 거래처 추가</button>
+  </div>
+  <div class="map-search-row">
+    <input class="map-search" placeholder="사업자 상호 또는 기재명 검색..." oninput="renderMapList(this.value)" id="mapSearchInp">
+    <span id="mapCount" style="font-size:11px;color:var(--t3);white-space:nowrap"></span>
+  </div>
+  <div class="map-list" id="mapList"></div>
+</div>
+
+<!-- ──────────────── MODALS ──────────────── -->
+
+<!-- BIZ MODAL (from group) -->
+<div class="ov h" id="mBiz">
+  <div class="mdl">
+    <h3 id="mBizTitle">사업자 상호 등록</h3>
+    <div class="fl">
+      <label>통장 기재명</label>
+      <input id="mBizPayer" readonly style="color:var(--t3)">
+    </div>
+    <div class="fl">
+      <label>사업자등록증 상호</label>
+      <input id="mBizName" placeholder="예: (주)에이엘티케이" onkeydown="if(event.key==='Enter')saveBiz()">
+      <div class="hint">저장 시 거래처 DB에 누적 저장됩니다</div>
+    </div>
+    <div class="ma">
+      <button class="btn" onclick="closeM('mBiz')">취소</button>
+      <button class="btn pri" onclick="saveBiz()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAP EDIT MODAL (거래처 DB 직접 편집) -->
+<div class="ov h" id="mMapEdit">
+  <div class="mdl">
+    <h3 id="mMapEditTitle">거래처 추가</h3>
+    <div class="fl">
+      <label>사업자등록증 상호</label>
+      <input id="mMapBiz" placeholder="예: (주)에이엘티케이">
+    </div>
+    <div class="fl">
+      <label>통장 기재명 목록 (쉼표 또는 줄바꿈으로 구분)</label>
+      <textarea id="mMapAliases" rows="3" placeholder="예: 에이엘티케이, ALTK, 에이엘티케이(박)"></textarea>
+      <div class="hint">같은 거래처의 다양한 기재명, 오타 변형 등을 모두 등록하세요</div>
+    </div>
+    <div class="fl">
+      <label>메모 (선택)</label>
+      <input id="mMapMemo" placeholder="예: 동대문 원단 거래처, 세금계산서 매월 5일">
+    </div>
+    <div class="ma">
+      <button class="btn" onclick="closeM('mMapEdit')">취소</button>
+      <button class="btn pri" onclick="saveMapEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- MOVE CATEGORY MODAL -->
+<div class="ov h" id="mCat">
+  <div class="mdl">
+    <h3>카테고리 이동</h3>
+    <p style="font-size:12px;color:var(--t3);margin-bottom:14px" id="mCatDesc"></p>
+    <div class="fl">
+      <label>이동할 카테고리</label>
+      <select id="mCatSel">
+        <option value="sales">매출</option>
+        <option value="purchase">매입</option>
+        <option value="zero">영세율</option>
+        <option value="cash">현금대납</option>
+        <option value="refund">환불/오류</option>
+      </select>
+    </div>
+    <div class="ma">
+      <button class="btn" onclick="closeM('mCat')">취소</button>
+      <button class="btn pri" onclick="doMoveCat()">이동</button>
+    </div>
+  </div>
+</div>
+
+<!-- MERGE MODAL -->
+<div class="ov h" id="mMerge">
+  <div class="mdl">
+    <h3>그룹 병합</h3>
+    <p style="font-size:12px;margin-bottom:14px;color:var(--t3)"><strong id="mMergeSrc" style="color:var(--t1)"></strong>을 아래 그룹에 합칩니다</p>
+    <div class="fl">
+      <label>합칠 대상 그룹 검색</label>
+      <input id="mMergeQ" placeholder="상호명 또는 기재명..." oninput="renderMergeList(this.value)">
+    </div>
+    <div class="merge-list" id="mMergeList"></div>
+    <div class="ma"><button class="btn" onclick="closeM('mMerge')">취소</button></div>
+  </div>
+</div>
+
+<!-- MOVE TX MODAL -->
+<div class="ov h" id="mTx">
+  <div class="mdl">
+    <h3>항목 이동</h3>
+    <p style="font-size:12px;color:var(--t3);margin-bottom:14px" id="mTxDesc"></p>
+    <div class="fl">
+      <label>이동 방법</label>
+      <select id="mTxHow" onchange="txHowChange()">
+        <option value="cat">카테고리 변경</option>
+        <option value="group">다른 그룹으로 이동</option>
+      </select>
+    </div>
+    <div id="mTxCatArea">
+      <div class="fl">
+        <label>카테고리</label>
+        <select id="mTxCat">
+          <option value="sales">매출</option>
+          <option value="purchase">매입</option>
+          <option value="zero">영세율</option>
+          <option value="cash">현금대납</option>
+          <option value="refund">환불/오류</option>
+        </select>
+      </div>
+    </div>
+    <div id="mTxGrpArea" style="display:none">
+      <div class="fl">
+        <label>대상 그룹 검색</label>
+        <input id="mTxGrpQ" placeholder="상호명 또는 기재명..." oninput="renderTxGrpList(this.value)">
+      </div>
+      <div class="merge-list" id="mTxGrpList"></div>
+    </div>
+    <div class="ma">
+      <button class="btn" onclick="closeM('mTx')">취소</button>
+      <button class="btn pri" onclick="doMoveTx()">이동</button>
+    </div>
+  </div>
+</div>
+
+<!-- REFUND REASON MODAL -->
+<div class="ov h" id="mRf">
+  <div class="mdl">
+    <h3>환불/오류 처리</h3>
+    <p style="font-size:12px;color:var(--t3);margin-bottom:12px" id="mRfDesc"></p>
+    <div class="fl">
+      <label>사유 메모 (선택)</label>
+      <textarea id="mRfReason" placeholder="예: 고객 이중입금, 거래 취소, 오입금 반환..." rows="2" style="resize:none"></textarea>
+    </div>
+    <div class="ma">
+      <button class="btn" onclick="closeM('mRf')">취소</button>
+      <button class="btn danger" onclick="doMkRf()">환불/오류로 이동</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════
+// STORAGE
+// ══════════════════════════════════════
+const LSM='inv_v5_months', LSP='inv_v5_map';
+const loadAll=()=>{try{return JSON.parse(localStorage.getItem(LSM)||'{}')}catch{return{}}};
+const saveAll=d=>localStorage.setItem(LSM,JSON.stringify(d));
+const loadMap=()=>{try{return JSON.parse(localStorage.getItem(LSP)||'[]')}catch{return[]}};
+const saveMap=d=>localStorage.setItem(LSP,JSON.stringify(d));
+
+// Migrate from v4 if exists
+(function migrate(){
+  if(localStorage.getItem(LSM)) return;
+  const old=localStorage.getItem('inv_v4_months');
+  if(old) localStorage.setItem(LSM,old);
+  const oldM=localStorage.getItem('inv_v4_map');
+  if(oldM) localStorage.setItem(LSP,oldM);
+})();
+
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+let curScreen='home', curM=null, curTab='sales', mState={}, txGrpSel=null;
+const expanded=new Set();
+
+const getData=()=>{const a=loadAll();return curM?a[curM]||null:null};
+const setData=d=>{const a=loadAll();a[curM]=d;saveAll(a)};
+
+// ══════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════
+function showScreen(name){
+  ['home','detail','map'].forEach(s=>{
+    document.getElementById('sc-'+s).classList.toggle('h', s!==name);
+  });
+  curScreen=name;
+  if(name==='home') renderHome();
+  if(name==='map') renderMapList('');
+}
+
+function openMonth(mk){
+  curM=mk;
+  expanded.clear();
+  curTab='sales';
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.tab').classList.add('active');
+  const d=getData();
+  document.getElementById('titleInp').value=d?.title||'';
+  document.getElementById('monthMemo').value=d?.memo||'';
+  showScreen('detail');
+  render();
+}
+
+// ══════════════════════════════════════
+// HOME RENDER
+// ══════════════════════════════════════
+function renderHome(){
+  const all=loadAll();
+  const keys=Object.keys(all).sort().reverse();
+  const list=document.getElementById('monthList');
+  document.getElementById('home-count').textContent=keys.length?`${keys.length}개월`:''  ;
+
+  if(!keys.length){
+    list.innerHTML=`<div class="mc-no-data"><div class="ic">📂</div><p>아직 업로드된 데이터가 없습니다</p><p>CSV 업로드 버튼 또는 아래 드래그 앤 드롭을 이용해 주세요</p></div>`;
+    return;
+  }
+  list.innerHTML=keys.map(k=>{
+    const d=all[k];
+    const sal=d.txs?.filter(t=>t.category==='sales').reduce((s,t)=>s+t.recv,0)||0;
+    const pur=d.txs?.filter(t=>t.category==='purchase').reduce((s,t)=>s+t.paid,0)||0;
+    const salesGroups=[...new Set((d.txs||[]).filter(t=>t.category==='sales').map(t=>t.groupKey))];
+    const pend=salesGroups.filter(gk=>!d.groups?.[gk]?.invoiceIssued).length;
+    const total=(d.txs||[]).length;
+    const [y,m]=k.split('-');
+    const label=`${y}년 ${parseInt(m)}월`;
+    const memo=d.memo||'';
+    const badgeHTML=pend>0
+      ?`<div class="mc-pending">미발행 ${pend}건</div>`
+      :(salesGroups.length?`<div class="mc-all-done">발행완료</div>`:'');
+    return `
+    <div class="mc" onclick="openMonth('${k}')">
+      <button class="mc-del" onclick="event.stopPropagation();delM(event,'${k}')">✕</button>
+      <div>
+        <div class="mc-month">${label}${d.title&&d.title!==label?` <span style="font-size:13px;color:var(--t3);font-weight:400">— ${escH(d.title)}</span>`:''}
+        </div>
+        <div class="mc-stats">
+          <span class="mc-stat">거래 <span class="v">${total}건</span></span>
+          <span class="mc-stat">매출 <span class="v g">${fmt(sal)}원</span></span>
+          <span class="mc-stat">매입 <span class="v r">${fmt(pur)}원</span></span>
+        </div>
+        ${memo?`<div class="mc-memo-preview">📝 ${escH(memo.substring(0,80))}${memo.length>80?'…':''}</div>`:''}
+      </div>
+      <div class="mc-right">
+        ${badgeHTML}
+        <span class="mc-arrow">→</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════
+// CSV
+// ══════════════════════════════════════
+function csvLine(line){
+  const r=[];let c='',q=false;
+  for(let i=0;i<line.length;i++){
+    if(line[i]==='"'){q=!q}
+    else if(line[i]===','&&!q){r.push(c);c=''}
+    else c+=line[i];
+  }
+  r.push(c);return r;
+}
+const pn=s=>parseInt((s||'0').replace(/[^0-9-]/g,''))||0;
+
+function parseCSV(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  let hi=-1;
+  for(let i=0;i<Math.min(15,lines.length);i++){
+    if(lines[i].includes('거래일시')||lines[i].includes('기재내용')){hi=i;break}
+  }
+  if(hi<0) return null;
+  const hdr=csvLine(lines[hi]).map(h=>h.trim().replace(/"/g,''));
+  const rows=[];
+  for(let i=hi+1;i<lines.length;i++){
+    const cells=csvLine(lines[i]);
+    if(cells.length<5) continue;
+    const o={};hdr.forEach((h,x)=>{o[h]=(cells[x]||'').trim().replace(/"/g,'')});
+    const ds=o['거래일시']||'';
+    if(!ds||ds.length<8) continue;
+    const paid=pn(o['지급(원)']||o['지급금액']||'0');
+    const recv=pn(o['입금(원)']||o['입금금액']||'0');
+    if(!paid&&!recv) continue;
+    rows.push({
+      id:`t${i}`,
+      date:ds.substring(0,10).replace(/\./g,'-'),
+      time:ds.length>10?ds.substring(11,16):'',
+      note:o['적요']||'',
+      name:(o['기재내용']||o['입금자명']||'(내용없음)').trim(),
+      paid,recv,
+      branch:o['취급점']||'',
+      txMemo:''
+    });
+  }
+  return rows;
+}
+
+function onFile(file){
+  if(!file) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    const arr=new Uint8Array(ev.target.result);
+    let enc='UTF-8';
+    for(let i=0;i<Math.min(arr.length-1,600);i++){
+      if(arr[i]>=0xA1&&arr[i]<=0xFE&&arr[i+1]>=0xA1&&arr[i+1]<=0xFE){enc='EUC-KR';break}
+    }
+    const r2=new FileReader();
+    r2.onload=e2=>processCSV(e2.target.result,file.name);
+    r2.readAsText(file,enc);
+  };
+  r.readAsArrayBuffer(file);
+  document.getElementById('fi').value='';
+}
+
+function processCSV(text,fname){
+  const raw=parseCSV(text);
+  if(!raw||!raw.length){toast('파싱 실패 — 우리은행 CSV인지 확인해주세요');return}
+  const firstDate=raw.find(r=>r.date)?.date||'';
+  let mk=firstDate.substring(0,7);
+  if(!mk){const m=fname.match(/(\d{6})/);mk=m?m[1].slice(0,4)+'-'+m[1].slice(4,6):new Date().toISOString().slice(0,7)}
+
+  const all=loadAll();
+  if(all[mk]?.txs?.length && !confirm(`${mk} 데이터가 이미 있습니다. 덮어쓸까요?\n(사업자 상호·메모·발행 상태는 유지됩니다)`)) return;
+
+  const mapping=loadMap();
+  function lookupBiz(name){
+    for(const m of mapping){
+      if(m.aliases?.some(a=>a&&name.includes(a))) return m.biz;
+      if(name===m.biz) return m.biz;
+    }
+    return '';
+  }
+
+  const txs=raw.map(tx=>({...tx,groupKey:tx.name,category:tx.paid>0&&!tx.recv?'purchase':'sales'}));
+  const groupKeys=[...new Set(txs.map(t=>t.groupKey))];
+  const prev=all[mk]?.groups||{};
+  const groups={};
+  groupKeys.forEach(k=>{
+    groups[k]={
+      bizName:prev[k]?.bizName||lookupBiz(k)||'',
+      invoiceIssued:prev[k]?.invoiceIssued||false,
+      mergedFrom:prev[k]?.mergedFrom||[],
+      memo:prev[k]?.memo||''
+    };
+  });
+  const [y,m]=mk.split('-');
+  const defaultTitle=`${y}년 ${parseInt(m)}월`;
+  all[mk]={title:all[mk]?.title||defaultTitle, memo:all[mk]?.memo||'', txs, groups};
+  saveAll(all);
+
+  curM=mk;
+  if(curScreen==='detail'){
+    const d=getData();
+    document.getElementById('titleInp').value=d.title;
+    document.getElementById('monthMemo').value=d.memo;
+    render();
+  } else {
+    openMonth(mk);
+  }
+  toast(`${mk} 업로드 완료 (${txs.length}건)`);
+}
+
+// ══════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════
+const fmt=n=>Math.abs(n).toLocaleString('ko-KR');
+const vat=amt=>{const s=Math.round(amt/1.1);return{s,v:amt-s}};
+const catL=c=>({sales:'매출',purchase:'매입',zero:'영세율',cash:'현금대납',refund:'환불/오류'})[c]||c;
+const ek=k=>encodeURIComponent(k).replace(/'/g,'%27');
+const dk=k=>decodeURIComponent(k);
+const defCat=tx=>tx.recv>0?'sales':'purchase';
+function escH(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+function getGroups(data,tab){
+  const txs=data.txs.filter(t=>t.category===tab);
+  const keys=[...new Set(txs.map(t=>t.groupKey))];
+  return keys.map(k=>{
+    const rows=txs.filter(t=>t.groupKey===k);
+    const total=rows.reduce((s,t)=>s+(t.recv||t.paid),0);
+    const g=data.groups[k]||{bizName:'',invoiceIssued:false,mergedFrom:[],memo:''};
+    const aliases=[k,...(g.mergedFrom||[])].filter((v,i,a)=>a.indexOf(v)===i);
+    return{k,rows,total,g,aliases};
+  }).sort((a,b)=>b.total-a.total);
+}
+
+// ══════════════════════════════════════
+// DETAIL RENDER
+// ══════════════════════════════════════
+function render(){
+  renderStats();
+  renderCounts();
+  renderGroups();
+}
+
+function renderStats(){
+  const d=getData();
+  if(!d){document.getElementById('statsBar').innerHTML='';return}
+  const sal=d.txs.filter(t=>t.category==='sales').reduce((s,t)=>s+t.recv,0);
+  const pur=d.txs.filter(t=>t.category==='purchase').reduce((s,t)=>s+t.paid,0);
+  const zer=d.txs.filter(t=>t.category==='zero').reduce((s,t)=>s+t.recv,0);
+  const cas=d.txs.filter(t=>t.category==='cash').reduce((s,t)=>s+(t.recv||t.paid),0);
+  const pend=getGroups(d,'sales').filter(g=>!g.g.invoiceIssued).length;
+  document.getElementById('statsBar').innerHTML=`
+    <div class="stat"><div class="sl">매출</div><div class="sv g">${fmt(sal)}</div></div>
+    <div class="stat"><div class="sl">매입</div><div class="sv r">${fmt(pur)}</div></div>
+    <div class="stat"><div class="sl">영세율</div><div class="sv b">${fmt(zer)}</div></div>
+    <div class="stat"><div class="sl">현금대납</div><div class="sv p">${fmt(cas)}</div></div>
+    <div class="stat"><div class="sl">미발행</div><div class="sv a">${pend}건</div></div>
+  `;
+}
+
+function renderCounts(){
+  const d=getData();
+  ['sales','purchase','zero','cash','refund'].forEach(t=>{
+    const el=document.getElementById('n-'+t);if(!el) return;
+    el.textContent=d?[...new Set(d.txs.filter(x=>x.category===t).map(x=>x.groupKey))].length:0;
+  });
+}
+
+function renderGroups(){
+  const d=getData();
+  const gl=document.getElementById('glist');
+  const ss=document.getElementById('secSum');
+  if(!d){gl.innerHTML='';ss.innerHTML='';return}
+
+  const groups=getGroups(d,curTab);
+  const tot=groups.reduce((s,g)=>s+g.total,0);
+  const isCash=curTab==='cash';
+  const sup=isCash?tot*10:Math.round(tot/1.1);
+  const va=isCash?tot:tot-sup;
+  const iss=groups.filter(g=>g.g.invoiceIssued).length;
+  ss.innerHTML=tot?`
+    <span>거래처 <strong>${groups.length}개</strong></span>
+    <span>합계 <strong>${fmt(tot)}원</strong></span>
+    ${curTab!=='refund'?`<span>공급가액 <strong>${fmt(sup)}원</strong></span><span>세액 <strong>${fmt(va)}원</strong></span><span>발행완료 <strong>${iss}/${groups.length}</strong></span>`:''}
+  `:'';
+
+  if(curTab==='cash') gl.innerHTML='<div class="cash-note">💜 현금대납 탭 — 현금 결제 후 월말에 세액만 입금하는 거래처입니다. 입금액 = 세액, 추정공급가 = 입금액×10으로 표시됩니다.</div>'+(groups.length?groups.map(g=>gcHTML(g)).join(''):'<div class="empty">이 탭에 항목이 없습니다</div>');
+  else gl.innerHTML=groups.length?groups.map(g=>gcHTML(g)).join(''):`<div class="empty">${curTab==='refund'?'환불/오류 항목이 없습니다':'이 탭에 항목이 없습니다'}</div>`;
+}
+
+function gcHTML(g){
+  const isOpen=expanded.has(g.k);
+  const isCash=curTab==='cash';
+  const isRf=curTab==='refund';
+  const supply=isCash?g.total*10:Math.round(g.total/1.1);
+  const vatAmt=isCash?g.total:g.total-supply;
+  const biz=g.g.bizName;
+  const iss=g.g.invoiceIssued;
+  const amtCls=curTab==='purchase'?'out':isRf?'rf':isCash?'ca':'in';
+  const gmemo=g.g.memo||'';
+  return `<div class="gc${isOpen?' open':''}">
+    <div class="gh" onclick="tog('${ek(g.k)}')">
+      <div>
+        <div class="biz${biz?'':' un'}">${biz?escH(biz):escH(g.k)}<button class="reg-btn" onclick="event.stopPropagation();openBiz('${ek(g.k)}')">${biz?'수정':'+ 상호등록'}</button></div>
+        ${biz?`<div class="gsub">${g.aliases.map(escH).join(' · ')}</div>`:''}
+        <div class="gcnt">${g.rows.length}건</div>
+        ${gmemo?`<div class="gmemo-inline">📝 ${escH(gmemo.substring(0,60))}${gmemo.length>60?'…':''}</div>`:''}
+      </div>
+      <div class="ga-right">
+        <div class="ga-total ${amtCls}">${fmt(g.total)}원</div>
+        ${!isRf?`<div class="ga-sub">${isCash?'세액':'공급'} ${fmt(isCash?g.total:supply)} · ${isCash?'추정공급':'세액'} ${fmt(isCash?supply:vatAmt)}</div>`:''}
+      </div>
+      ${!isRf?`<span class="badge${iss?' ok':' no'}" onclick="event.stopPropagation();togInv('${ek(g.k)}')">${iss?'발행✓':'미발행'}</span>`:'<span class="badge rf">환불/오류</span>'}
+      <span class="chev">▼</span>
+    </div>
+    ${isOpen?gbHTML(g,isCash,isRf):''}
+  </div>`;
+}
+
+function gbHTML(g,isCash,isRf){
+  const rows=g.rows.map(tx=>{
+    const amt=tx.recv||tx.paid;
+    const ac=tx.recv?'in':'out';
+    const supply=isCash?amt*10:Math.round(amt/1.1);
+    const vatAmt=isCash?amt:amt-supply;
+    const hm=!!tx.txMemo;
+    return `<div class="tx">
+      <div class="td">${tx.date}<br><span style="font-size:10px;color:var(--t3)">${tx.time}</span></div>
+      <div>
+        <div class="tn">${escH(tx.name)}</div>
+        <div class="tnote">${escH(tx.note||tx.branch||'')}</div>
+        <textarea class="tx-memo${hm?' hm':''}" placeholder="메모..." rows="1"
+          onblur="saveTxMemo('${tx.id}',this.value)">${escH(tx.txMemo||'')}</textarea>
+      </div>
+      <div style="text-align:right">
+        <div class="ta ${isRf?'rf':isCash?'ca':ac}">${fmt(amt)}</div>
+        <div class="tvat">${isCash?'세액':'공급'} ${fmt(isCash?amt:supply)}</div>
+        <div class="tvat">${isCash?'추정공급':'세액'} ${fmt(isCash?supply:vatAmt)}</div>
+      </div>
+      <div class="tx-acts">
+        <button class="ab" onclick="openTx('${ek(g.k)}','${tx.id}')">이동</button>
+        ${!isRf?`<button class="ab d" onclick="openRf('${ek(g.k)}','${tx.id}')">환불</button>`:`<button class="ab" onclick="quickRestore('${tx.id}')">복원</button>`}
+      </div>
+    </div>`;
+  }).join('');
+  const supply=isCash?g.total*10:Math.round(g.total/1.1);
+  const vatAmt=isCash?g.total:g.total-supply;
+  const gmemo=g.g.memo||'';
+  return `<div class="gb">
+    ${rows}
+    <div class="gf">
+      <div style="flex:1;min-width:0">
+        <div class="gfa" style="margin-bottom:8px">
+          <div class="i"><div class="l">합계</div><div class="v">${fmt(g.total)}</div></div>
+          ${!isRf?`<div class="i"><div class="l">${isCash?'세액(입금)':'공급가액'}</div><div class="v">${fmt(isCash?g.total:supply)}</div></div><div class="i"><div class="l">${isCash?'추정공급가':'세액'}</div><div class="v">${fmt(isCash?supply:vatAmt)}</div></div>`:''}
+        </div>
+        <div class="gmemo-wrap">
+          <textarea class="gmemo-ta${gmemo?' hm':''}" placeholder="거래처 메모 — 특이사항, 계약 조건, 이월 건..."
+            onblur="saveGrpMemo('${ek(g.k)}',this.value)">${escH(gmemo)}</textarea>
+        </div>
+      </div>
+      <div class="gfb">
+        <button class="btn sm" onclick="openMerge('${ek(g.k)}')">그룹 병합</button>
+        <button class="btn sm" onclick="openCat('${ek(g.k)}')">카테고리 이동</button>
+        ${!isRf?`<button class="btn sm" onclick="togInv('${ek(g.k)}')">${g.g.invoiceIssued?'발행 취소':'발행 완료'}</button>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function tog(ke){
+  const k=dk(ke);
+  if(expanded.has(k)) expanded.delete(k); else expanded.add(k);
+  renderGroups();
+}
+
+// ══════════════════════════════════════
+// MEMO SAVES
+// ══════════════════════════════════════
+function saveTxMemo(id,val){
+  const d=getData();if(!d) return;
+  const tx=d.txs.find(t=>t.id===id);if(!tx) return;
+  tx.txMemo=val.trim();setData(d);
+}
+function saveGrpMemo(ke,val){
+  const k=dk(ke);const d=getData();if(!d) return;
+  if(!d.groups[k]) d.groups[k]={bizName:'',invoiceIssued:false,mergedFrom:[],memo:''};
+  d.groups[k].memo=val.trim();setData(d);
+  // Only re-render the header preview (full render would lose focus)
+  renderGroups();
+}
+function saveTitle(){
+  if(!curM) return;const d=getData();if(!d) return;
+  d.title=document.getElementById('titleInp').value;setData(d);
+}
+function saveMonthMemo(){
+  if(!curM) return;const d=getData();if(!d) return;
+  d.memo=document.getElementById('monthMemo').value;setData(d);
+}
+
+// ══════════════════════════════════════
+// ACTIONS
+// ══════════════════════════════════════
+function togInv(ke){
+  const k=dk(ke);const d=getData();if(!d) return;
+  if(!d.groups[k]) d.groups[k]={bizName:'',invoiceIssued:false,mergedFrom:[],memo:''};
+  d.groups[k].invoiceIssued=!d.groups[k].invoiceIssued;
+  setData(d);render();toast(d.groups[k].invoiceIssued?'발행 완료 처리':'미발행으로 변경');
+}
+
+function openRf(ke,id){
+  const k=dk(ke);const d=getData();const tx=d?.txs?.find(t=>t.id===id);if(!tx) return;
+  mState.rfK=k;mState.rfId=id;
+  document.getElementById('mRfDesc').textContent=`${tx.date} · ${tx.name} · ${fmt(tx.recv||tx.paid)}원`;
+  document.getElementById('mRfReason').value=tx.txMemo||'';
+  openM('mRf');setTimeout(()=>document.getElementById('mRfReason').focus(),100);
+}
+function doMkRf(){
+  const d=getData();if(!d) return;
+  const tx=d.txs.find(t=>t.id===mState.rfId);if(!tx) return;
+  const reason=document.getElementById('mRfReason').value.trim();
+  tx.category='refund';if(reason) tx.txMemo=reason;
+  setData(d);closeM('mRf');render();toast('환불/오류 항목으로 이동');
+}
+function quickRestore(id){
+  const d=getData();if(!d) return;
+  const tx=d.txs.find(t=>t.id===id);if(!tx) return;
+  tx.category=defCat(tx);setData(d);render();toast('복원됨');
+}
+
+// ── BIZ MODAL (from group) ──
+function openBiz(ke){
+  const k=dk(ke);const d=getData();const g=d?.groups?.[k]||{};
+  document.getElementById('mBizPayer').value=k;
+  document.getElementById('mBizName').value=g.bizName||'';
+  document.getElementById('mBizTitle').textContent=g.bizName?'사업자 상호 수정':'사업자 상호 등록';
+  mState.bizK=k;openM('mBiz');setTimeout(()=>document.getElementById('mBizName').focus(),100);
+}
+function saveBiz(){
+  const biz=document.getElementById('mBizName').value.trim();
+  if(!biz){toast('상호명을 입력해주세요');return}
+  const k=mState.bizK;const d=getData();if(!d) return;
+  if(!d.groups[k]) d.groups[k]={bizName:'',invoiceIssued:false,mergedFrom:[],memo:''};
+  d.groups[k].bizName=biz;setData(d);
+  // Upsert global mapping
+  const mp=loadMap();
+  const ex=mp.find(m=>m.biz===biz);
+  if(ex){if(!ex.aliases.includes(k)) ex.aliases.push(k)}
+  else mp.push({biz,aliases:[k],memo:''});
+  saveMap(mp);
+  closeM('mBiz');render();toast('사업자 상호 저장 — 거래처 DB에 누적됨');
+}
+
+// ── CAT MODAL ──
+function openCat(ke){
+  const k=dk(ke);const d=getData();const g=d?.groups?.[k]||{};
+  mState.catK=k;
+  document.getElementById('mCatDesc').textContent=`"${g.bizName||k}" 그룹 전체를 이동합니다`;
+  document.getElementById('mCatSel').value=curTab;
+  openM('mCat');
+}
+function doMoveCat(){
+  const k=mState.catK;const cat=document.getElementById('mCatSel').value;
+  const d=getData();if(!d) return;
+  d.txs.forEach(t=>{if(t.groupKey===k&&t.category!=='refund') t.category=cat});
+  setData(d);closeM('mCat');render();toast(`${catL(cat)}으로 이동`);
+}
+
+// ── MERGE MODAL ──
+function openMerge(ke){
+  const k=dk(ke);const d=getData();const g=d?.groups?.[k]||{};
+  mState.mergeK=k;
+  document.getElementById('mMergeSrc').textContent=g.bizName||k;
+  document.getElementById('mMergeQ').value='';
+  document.getElementById('mMergeList').innerHTML='';
+  openM('mMerge');setTimeout(()=>document.getElementById('mMergeQ').focus(),100);
+}
+function renderMergeList(q){
+  const d=getData();if(!d) return;
+  const src=mState.mergeK;
+  const all=[...new Set(d.txs.map(t=>t.groupKey))].filter(k=>k!==src);
+  const fil=q?all.filter(k=>{const g=d.groups[k]||{};return k.includes(q)||(g.bizName||'').includes(q)}):all;
+  document.getElementById('mMergeList').innerHTML=fil.slice(0,12).map(k=>{const g=d.groups[k]||{};return`
+    <div class="mi" onclick="doMerge('${ek(k)}')">
+      <div class="mb">${escH(g.bizName||k)}</div>
+      ${g.bizName?`<div class="ms">${escH(k)}</div>`:''}
+    </div>`}).join('')||'<div style="padding:12px;color:var(--t3);font-size:12px;text-align:center">결과 없음</div>';
+}
+function doMerge(tke){
+  const src=mState.mergeK;const tgt=dk(tke);
+  const d=getData();if(!d) return;
+  d.txs.forEach(t=>{if(t.groupKey===src) t.groupKey=tgt});
+  if(!d.groups[tgt]) d.groups[tgt]={bizName:'',invoiceIssued:false,mergedFrom:[],memo:''};
+  if(!d.groups[tgt].mergedFrom) d.groups[tgt].mergedFrom=[];
+  d.groups[tgt].mergedFrom=[...new Set([...d.groups[tgt].mergedFrom,src,...(d.groups[src]?.mergedFrom||[])])];
+  if(d.groups[src]?.memo&&!d.groups[tgt].memo) d.groups[tgt].memo=d.groups[src].memo;
+  delete d.groups[src];
+  expanded.delete(src);expanded.add(tgt);
+  setData(d);closeM('mMerge');render();toast('그룹 병합 완료');
+}
+
+// ── MOVE TX MODAL ──
+function openTx(ke,id){
+  const k=dk(ke);const d=getData();const tx=d?.txs?.find(t=>t.id===id);if(!tx) return;
+  mState.txK=k;mState.txId=id;txGrpSel=null;
+  document.getElementById('mTxDesc').textContent=`${tx.date} · ${tx.name} · ${fmt(tx.recv||tx.paid)}원`;
+  document.getElementById('mTxHow').value='cat';
+  document.getElementById('mTxCat').value=curTab==='refund'?defCat(tx):curTab;
+  document.getElementById('mTxGrpQ').value='';
+  document.getElementById('mTxGrpList').innerHTML='';
+  txHowChange();openM('mTx');
+}
+function txHowChange(){
+  const v=document.getElementById('mTxHow').value;
+  document.getElementById('mTxCatArea').style.display=v==='cat'?'':'none';
+  document.getElementById('mTxGrpArea').style.display=v==='group'?'':'none';
+}
+function renderTxGrpList(q){
+  const d=getData();if(!d) return;
+  const all=[...new Set(d.txs.map(t=>t.groupKey))].filter(k=>k!==mState.txK);
+  const fil=q?all.filter(k=>{const g=d.groups[k]||{};return k.includes(q)||(g.bizName||'').includes(q)}):all.slice(0,10);
+  document.getElementById('mTxGrpList').innerHTML=fil.map(k=>{const g=d.groups[k]||{};return`
+    <div class="mi" onclick="selTxGrp('${ek(k)}',this)">
+      <div class="mb">${escH(g.bizName||k)}</div>
+      ${g.bizName?`<div class="ms">${escH(k)}</div>`:''}
+    </div>`}).join('');
+}
+function selTxGrp(ke,el){
+  txGrpSel=dk(ke);
+  document.querySelectorAll('#mTxGrpList .mi').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('mTxGrpQ').value='';
+  document.getElementById('mTxGrpList').innerHTML='';
+}
+function doMoveTx(){
+  const d=getData();const tx=d?.txs?.find(t=>t.id===mState.txId);if(!tx) return;
+  if(document.getElementById('mTxHow').value==='cat'){
+    tx.category=document.getElementById('mTxCat').value;
+    toast(`${catL(tx.category)}으로 이동`);
+  } else {
+    if(!txGrpSel){toast('대상 그룹을 선택해주세요');return}
+    tx.groupKey=txGrpSel;toast('그룹 이동 완료');txGrpSel=null;
+  }
+  setData(d);closeM('mTx');render();
+}
+
+// ══════════════════════════════════════
+// MAPPING SCREEN
+// ══════════════════════════════════════
+function renderMapList(q){
+  const mp=loadMap();
+  const fil=q?mp.filter(m=>m.biz.includes(q)||m.aliases?.some(a=>a.includes(q))):mp;
+  document.getElementById('mapCount').textContent=`${mp.length}개 거래처`;
+  const el=document.getElementById('mapList');
+  if(!fil.length){el.innerHTML='<div class="map-empty">등록된 거래처가 없습니다.<br>거래처 추가 버튼으로 직접 등록하거나,<br>월별 정리 화면에서 "상호등록" 버튼으로 추가해도 됩니다.</div>';return}
+  el.innerHTML=fil.map((m,i)=>{
+    const idx=mp.indexOf(m);
+    return `<div class="map-item">
+      <div class="map-item-info">
+        <div class="map-biz">${escH(m.biz)}</div>
+        <div class="map-aliases">${(m.aliases||[]).map(a=>`<span class="alias-chip">${escH(a)}</span>`).join('')}</div>
+        ${m.memo?`<div class="map-memo">📝 ${escH(m.memo)}</div>`:''}
+      </div>
+      <div class="map-item-acts">
+        <button class="btn sm" onclick="openMapEdit(${idx})">수정</button>
+        <button class="btn sm danger" onclick="delMapItem(${idx})">삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openMapEdit(idx){
+  const mp=loadMap();
+  mState.mapIdx=idx;
+  if(idx===-1){
+    document.getElementById('mMapEditTitle').textContent='거래처 추가';
+    document.getElementById('mMapBiz').value='';
+    document.getElementById('mMapAliases').value='';
+    document.getElementById('mMapMemo').value='';
+  } else {
+    const m=mp[idx];
+    document.getElementById('mMapEditTitle').textContent='거래처 수정';
+    document.getElementById('mMapBiz').value=m.biz;
+    document.getElementById('mMapAliases').value=(m.aliases||[]).join(', ');
+    document.getElementById('mMapMemo').value=m.memo||'';
+  }
+  openM('mMapEdit');
+  setTimeout(()=>document.getElementById('mMapBiz').focus(),100);
+}
+
+function saveMapEdit(){
+  const biz=document.getElementById('mMapBiz').value.trim();
+  if(!biz){toast('사업자 상호를 입력해주세요');return}
+  const aliasRaw=document.getElementById('mMapAliases').value;
+  const aliases=aliasRaw.split(/[,，\n]+/).map(a=>a.trim()).filter(Boolean);
+  const memo=document.getElementById('mMapMemo').value.trim();
+  const mp=loadMap();
+  const entry={biz,aliases,memo};
+  if(mState.mapIdx===-1) mp.push(entry);
+  else mp[mState.mapIdx]=entry;
+  saveMap(mp);
+  closeM('mMapEdit');
+  renderMapList(document.getElementById('mapSearchInp').value);
+  toast('거래처 저장 완료');
+}
+
+function delMapItem(idx){
+  if(!confirm('삭제할까요?')) return;
+  const mp=loadMap();mp.splice(idx,1);saveMap(mp);
+  renderMapList(document.getElementById('mapSearchInp').value);
+  toast('삭제됨');
+}
+
+// ══════════════════════════════════════
+// MONTH MGMT
+// ══════════════════════════════════════
+function delM(e,k){
+  e.stopPropagation();
+  if(!confirm(`${k} 데이터를 삭제할까요?`)) return;
+  const a=loadAll();delete a[k];saveAll(a);
+  if(curM===k) curM=null;
+  renderHome();toast(`${k} 삭제됨`);
+}
+
+function setTab(t,btn){
+  curTab=t;expanded.clear();
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGroups();renderStats();
+}
+
+// ══════════════════════════════════════
+// MODAL UTILS
+// ══════════════════════════════════════
+function openM(id){document.getElementById(id).classList.remove('h')}
+function closeM(id){document.getElementById(id).classList.add('h')}
+document.querySelectorAll('.ov').forEach(el=>{
+  el.addEventListener('click',function(e){if(e.target===this) closeM(this.id)});
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape') document.querySelectorAll('.ov:not(.h)').forEach(el=>closeM(el.id));
+});
+
+// ══════════════════════════════════════
+// DRAG DROP
+// ══════════════════════════════════════
+document.addEventListener('dragover',e=>{
+  e.preventDefault();
+  document.getElementById('dropHint')?.classList.add('drag');
+});
+document.addEventListener('dragleave',e=>{
+  if(!e.relatedTarget) document.getElementById('dropHint')?.classList.remove('drag');
+});
+document.addEventListener('drop',e=>{
+  e.preventDefault();
+  document.getElementById('dropHint')?.classList.remove('drag');
+  const f=e.dataTransfer.files[0];
+  if(f&&f.name.toLowerCase().endsWith('.csv')) onFile(f);
+});
+
+// ══════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════
+let tt;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+(function(){
+  renderHome();
+})();
+</script>
+</body>
+</html>
