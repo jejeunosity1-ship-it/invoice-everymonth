@@ -187,6 +187,13 @@ body{background:var(--bg);color:var(--t1);font-family:-apple-system,'Segoe UI',s
 .empty{text-align:center;padding:36px;color:var(--t3);font-size:12px}
 .toast{position:fixed;bottom:24px;right:24px;background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:9px 16px;font-size:12px;color:var(--t1);z-index:300;opacity:0;transition:opacity .25s;pointer-events:none;max-width:280px}
 .toast.show{opacity:1}
+/* BULK SELECT */
+.bulk-bar{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--s2);border:1px solid var(--accent);border-radius:10px;padding:10px 20px;display:flex;align-items:center;gap:12px;z-index:50;box-shadow:0 4px 20px rgba(0,0,0,.6);white-space:nowrap}
+.bulk-bar.h{display:none}
+.bulk-count{font-size:13px;font-weight:600;color:var(--t1);min-width:70px}
+.gc-cb{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;margin-top:1px}
+.gh.with-cb{grid-template-columns:28px 1fr 170px 84px 20px}
+.gc.gc-selected{border-color:var(--accent);background:rgba(74,124,199,.07)}
 </style>
 </head>
 <body>
@@ -201,8 +208,11 @@ body{background:var(--bg);color:var(--t1);font-family:-apple-system,'Segoe UI',s
     </div>
     <div class="home-actions">
       <button class="hdr-btn" onclick="showScreen('map')">🏢 거래처 DB</button>
+      <button class="hdr-btn" onclick="exportData()">💾 내보내기</button>
+      <button class="hdr-btn" onclick="document.getElementById('fi2').click()">📥 가져오기</button>
       <button class="hdr-btn pri" onclick="document.getElementById('fi').click()">📂 CSV 업로드</button>
     </div>
+    <input type="file" id="fi2" accept=".json" style="display:none" onchange="importData(this.files[0])">
   </div>
 
   <div class="section-label">
@@ -396,17 +406,33 @@ body{background:var(--bg);color:var(--t1);font-family:-apple-system,'Segoe UI',s
   </div>
 </div>
 
+<!-- BULK ACTION BAR -->
+<div class="bulk-bar h" id="bulkBar">
+  <span class="bulk-count" id="bulkCount">0개 선택됨</span>
+  <button class="btn sm" onclick="selAll()">전체선택</button>
+  <button class="btn sm pri" onclick="openBulkCat()">카테고리 이동</button>
+  <button class="btn sm danger" onclick="exitSelMode()">취소</button>
+</div>
+
 <div class="toast" id="toast"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 // ══════════════════════════════════════
 // STORAGE
 // ══════════════════════════════════════
 const LSM='inv_v5_months', LSP='inv_v5_map';
 const loadAll=()=>{try{return JSON.parse(localStorage.getItem(LSM)||'{}')}catch{return{}}};
-const saveAll=d=>localStorage.setItem(LSM,JSON.stringify(d));
+const saveAll=d=>{
+  localStorage.setItem(LSM,JSON.stringify(d));
+  if(window._fbSync) window._fbSync('months',d);
+};
 const loadMap=()=>{try{return JSON.parse(localStorage.getItem(LSP)||'[]')}catch{return[]}};
-const saveMap=d=>localStorage.setItem(LSP,JSON.stringify(d));
+const saveMap=d=>{
+  localStorage.setItem(LSP,JSON.stringify(d));
+  if(window._fbSync) window._fbSync('bizmap',d);
+};
 
 // Migrate from v4 if exists
 (function migrate(){
@@ -422,6 +448,8 @@ const saveMap=d=>localStorage.setItem(LSP,JSON.stringify(d));
 // ══════════════════════════════════════
 let curScreen='home', curM=null, curTab='sales', mState={}, txGrpSel=null;
 const expanded=new Set();
+let selMode=false;
+const selSet=new Set();
 
 const getData=()=>{const a=loadAll();return curM?a[curM]||null:null};
 const setData=d=>{const a=loadAll();a[curM]=d;saveAll(a)};
@@ -441,6 +469,7 @@ function showScreen(name){
 function openMonth(mk){
   curM=mk;
   expanded.clear();
+  selMode=false;selSet.clear();
   curTab='sales';
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
   document.querySelector('.tab').classList.add('active');
@@ -682,6 +711,7 @@ function renderGroups(){
     <span>거래처 <strong>${groups.length}개</strong></span>
     <span>합계 <strong>${fmt(tot)}원</strong></span>
     ${curTab!=='refund'?`<span>공급가액 <strong>${fmt(sup)}원</strong></span><span>세액 <strong>${fmt(va)}원</strong></span><span>발행완료 <strong>${iss}/${groups.length}</strong></span>`:''}
+    <button class="btn sm" onclick="toggleSelMode()" style="margin-left:auto">${selMode?'✕ 선택취소':'☑ 선택'}</button>
   `:'';
 
   if(curTab==='cash') gl.innerHTML='<div class="cash-note">💜 현금대납 탭 — 현금 결제 후 월말에 세액만 입금하는 거래처입니다. 입금액 = 세액, 추정공급가 = 입금액×10으로 표시됩니다.</div>'+(groups.length?groups.map(g=>gcHTML(g)).join(''):'<div class="empty">이 탭에 항목이 없습니다</div>');
@@ -698,8 +728,11 @@ function gcHTML(g){
   const iss=g.g.invoiceIssued;
   const amtCls=curTab==='purchase'?'out':isRf?'rf':isCash?'ca':'in';
   const gmemo=g.g.memo||'';
-  return `<div class="gc${isOpen?' open':''}">
-    <div class="gh" onclick="tog('${ek(g.k)}')">
+  const isSel=selSet.has(g.k);
+  const ghClick=selMode?`toggleSel('${ek(g.k)}')`:`tog('${ek(g.k)}')`;
+  return `<div class="gc${isOpen&&!selMode?' open':''}${isSel?' gc-selected':''}">
+    <div class="gh${selMode?' with-cb':''}" onclick="${ghClick}">
+      ${selMode?`<input type="checkbox" class="gc-cb" ${isSel?'checked':''} onclick="event.stopPropagation();toggleSel('${ek(g.k)}')">`:''}
       <div>
         <div class="biz${biz?'':' un'}">${biz?escH(biz):escH(g.k)}<button class="reg-btn" onclick="event.stopPropagation();openBiz('${ek(g.k)}')">${biz?'수정':'+ 상호등록'}</button></div>
         ${biz?`<div class="gsub">${g.aliases.map(escH).join(' · ')}</div>`:''}
@@ -713,7 +746,7 @@ function gcHTML(g){
       ${!isRf?`<span class="badge${iss?' ok':' no'}" onclick="event.stopPropagation();togInv('${ek(g.k)}')">${iss?'발행✓':'미발행'}</span>`:'<span class="badge rf">환불/오류</span>'}
       <span class="chev">▼</span>
     </div>
-    ${isOpen?gbHTML(g,isCash,isRf):''}
+    ${isOpen&&!selMode?gbHTML(g,isCash,isRf):''}
   </div>`;
 }
 
@@ -860,10 +893,20 @@ function openCat(ke){
   openM('mCat');
 }
 function doMoveCat(){
-  const k=mState.catK;const cat=document.getElementById('mCatSel').value;
+  const cat=document.getElementById('mCatSel').value;
   const d=getData();if(!d) return;
-  d.txs.forEach(t=>{if(t.groupKey===k&&t.category!=='refund') t.category=cat});
-  setData(d);closeM('mCat');render();toast(`${catL(cat)}으로 이동`);
+  if(mState.isBulk){
+    const n=selSet.size;
+    d.txs.forEach(t=>{if(selSet.has(t.groupKey)&&t.category!=='refund') t.category=cat});
+    setData(d);closeM('mCat');
+    selSet.clear();selMode=false;updateBulkBar();
+    mState.isBulk=false;
+    render();toast(`${n}개 그룹 → ${catL(cat)}으로 이동`);
+  } else {
+    const k=mState.catK;
+    d.txs.forEach(t=>{if(t.groupKey===k&&t.category!=='refund') t.category=cat});
+    setData(d);closeM('mCat');render();toast(`${catL(cat)}으로 이동`);
+  }
 }
 
 // ── MERGE MODAL ──
@@ -1024,6 +1067,7 @@ function delM(e,k){
 
 function setTab(t,btn){
   curTab=t;expanded.clear();
+  selMode=false;selSet.clear();updateBulkBar();
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   renderGroups();renderStats();
@@ -1069,10 +1113,112 @@ function toast(msg){
 }
 
 // ══════════════════════════════════════
-// INIT
+// BULK SELECT
+// ══════════════════════════════════════
+function toggleSelMode(){
+  selMode=!selMode;
+  selSet.clear();
+  updateBulkBar();
+  renderGroups();
+}
+function exitSelMode(){
+  selMode=false;
+  selSet.clear();
+  updateBulkBar();
+  renderGroups();
+}
+function toggleSel(ke){
+  const k=dk(ke);
+  if(selSet.has(k)) selSet.delete(k); else selSet.add(k);
+  updateBulkBar();
+  renderGroups();
+}
+function selAll(){
+  const d=getData();if(!d) return;
+  getGroups(d,curTab).forEach(g=>selSet.add(g.k));
+  updateBulkBar();
+  renderGroups();
+}
+function updateBulkBar(){
+  const bar=document.getElementById('bulkBar');if(!bar) return;
+  if(selMode){
+    bar.classList.remove('h');
+    document.getElementById('bulkCount').textContent=`${selSet.size}개 선택됨`;
+  } else {
+    bar.classList.add('h');
+  }
+}
+function openBulkCat(){
+  if(!selSet.size){toast('선택된 항목이 없습니다');return}
+  document.getElementById('mCatDesc').textContent=`${selSet.size}개 그룹을 이동합니다`;
+  document.getElementById('mCatSel').value=curTab;
+  mState.isBulk=true;
+  openM('mCat');
+}
+
+// ══════════════════════════════════════
+// EXPORT / IMPORT
+// ══════════════════════════════════════
+function exportData(){
+  const data={months:loadAll(),map:loadMap()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='invoice_backup.json';
+  a.click();
+  toast('내보내기 완료');
+}
+function importData(file){
+  if(!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(data.months) saveAll(data.months);
+      if(data.map) saveMap(data.map);
+      toast('가져오기 완료!');
+      renderHome();
+    }catch{toast('파일 형식 오류');}
+  };
+  r.readAsText(file);
+  document.getElementById('fi2').value='';
+}
+
+// ══════════════════════════════════════
+// FIREBASE INIT
 // ══════════════════════════════════════
 (function(){
-  renderHome();
+  try{
+    firebase.initializeApp({
+      apiKey:"AIzaSyDFqipR0Fzzxdy1JOIB4hUzDU1YwOKLfnA",
+      authDomain:"jejeunosity-1f4e2.firebaseapp.com",
+      projectId:"jejeunosity-1f4e2",
+      storageBucket:"jejeunosity-1f4e2.firebasestorage.app",
+      messagingSenderId:"121831836183",
+      appId:"1:121831836183:web:0d61fb554b7707bece2a52"
+    });
+    const db=firebase.firestore();
+    window._fbSync=(docId,data)=>{
+      db.collection('invoice').doc(docId).set({v:JSON.stringify(data)}).catch(()=>{});
+    };
+    let ready=false;
+    db.collection('invoice').doc('months').onSnapshot(snap=>{
+      if(snap.exists){
+        localStorage.setItem(LSM,snap.data().v||'{}');
+      } else if(!ready){
+        const local=loadAll();
+        if(Object.keys(local).length) window._fbSync('months',local);
+      }
+      if(!ready){ready=true;renderHome();}
+      else{
+        if(curScreen==='home') renderHome();
+        else if(curScreen==='detail') render();
+      }
+    },()=>{if(!ready){ready=true;renderHome();}});
+    db.collection('invoice').doc('bizmap').onSnapshot(snap=>{
+      if(snap.exists) localStorage.setItem(LSP,snap.data().v||'[]');
+    });
+  }catch(e){renderHome();}
 })();
 </script>
 </body>
